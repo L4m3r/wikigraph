@@ -111,13 +111,12 @@ class Graph:
         return self.g
 
 # TODO error handeling
-async def search(title: str) -> list[str]:
+async def search(title: str, limit: int = 10) -> list[str]:
     async with aiohttp.ClientSession() as session:
         params = {
             'list': 'search',
             'srprop': '',
-            'srlimit': 10,
-            'limit': 10,
+            'srlimit': limit,
             'srsearch': title,
             'action': 'query',
             'format': 'json'
