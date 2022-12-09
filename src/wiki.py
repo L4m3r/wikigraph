@@ -15,7 +15,7 @@ logger = logging.getLogger('wiki')
 logger.setLevel(logging.DEBUG)
 
 BASE_URL = "https://ru.wikipedia.org/wiki/"
-API_URL = "http://ru.wikipedia.org/w/api.php"
+API_URL = "https://ru.wikipedia.org/w/api.php"
 
 headers = {
     'User-Agent': 'wikipedia (https://github.com/goldsmith/Wikipedia/)'
@@ -23,70 +23,72 @@ headers = {
 
 MAX_WORKERS = 4
 
+
 class Graph:
-    
-    def __init__(self, title: str, depth = 2) -> None:
+
+    def __init__(self, title: str, depth=2) -> None:
+        self.session = None
         self.title = title
         self.depth = depth
         self.cache = Cache('redis', 6379, 0)
         self.g: dict[str, list[str]] = {}
         self.worker_queue = asyncio.Queue()
         self.task_queue = asyncio.Queue()
-        
+
     @classmethod
-    async def create(cls, title: str, depth = 2):
+    async def create(cls, title: str, depth=2):
         graph = Graph(title, depth)
         await graph.build()
-        
-        if hasattr(graph, 'session'):
+
+        if graph.session is not None:
             await graph.session.close()
-        
+
         return graph
 
     async def build(self):
         curr = 1
         self.task_queue.put_nowait(self.title)
         workers = []
-        
+
         while curr <= self.depth:
-            
+
             while not self.task_queue.empty():
                 self.worker_queue.put_nowait(self.task_queue.get_nowait())
-            
+
             for _ in range(MAX_WORKERS):
                 task = asyncio.create_task(
                     self.worker(self.worker_queue, self.task_queue))
                 workers.append(task)
-                
+
             await self.worker_queue.join()
-            
+
             curr += 1
-        
+
         for worker in workers:
             worker.cancel()
-        
+
         await asyncio.gather(*workers, return_exceptions=True)
-    
-    async def worker(self, worker_queue: asyncio.Queue, task_queue: asyncio.Queue) -> list[str]:
+
+    async def worker(self, worker_queue: asyncio.Queue, task_queue: asyncio.Queue) -> None:
         while True:
             page = await worker_queue.get()
-            
+
             links = self.cache.get_links(page)
             # check in cache
             if links is None:
                 links = await self.get_link(page)
                 self.cache.set_links(page, links)
-            
+
             for link in links:
                 task_queue.put_nowait(link)
-            
+
             self.g[page] = links
-                
+
             worker_queue.task_done()
 
     async def get_link(self, page: str) -> list[str]:
-        
-        if not hasattr(self, 'session'):
+
+        if self.session is None:
             self.session = aiohttp.ClientSession()
 
         async with self.session.get(BASE_URL + page, headers=headers) as resp:
@@ -94,8 +96,8 @@ class Graph:
             bs = BeautifulSoup(text, 'lxml')
 
             p = bs.find('div', id='mw-content-text') \
-                  .find('div',class_='mw-parser-output') \
-                  .find('p', recursive=False)
+                .find('div', class_='mw-parser-output') \
+                .find('p', recursive=False)
 
             data = set()
 
@@ -103,14 +105,15 @@ class Graph:
                 data.add(link['title'])
 
             logger.debug('Page: %s. Found %s links', page, len(data))
-            
+
             return list(data)
-    
+
     @property
     def graph(self):
         return self.g
 
-# TODO error handeling
+
+# TODO error handling
 async def search(title: str, limit: int = 10) -> list[str]:
     async with aiohttp.ClientSession() as session:
         params = {
@@ -127,10 +130,10 @@ async def search(title: str, limit: int = 10) -> list[str]:
 
 
 async def main():
-    
     g = await Graph.create('Память', 2)
-    #links = await get_links('Москва')
+    # links = await get_links('Москва')
     print(g.graph)
+
 
 if __name__ == '__main__':
     t = time()
@@ -139,4 +142,3 @@ if __name__ == '__main__':
     # get_links("Объектно-ориентированное_программирование")
 
     print(time() - t)
-    

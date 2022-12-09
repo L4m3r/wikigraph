@@ -1,31 +1,32 @@
-from aiohttp import web
-from aiohttp.web import Request, RequestHandler
-from requestClasses import GraphRequest, SearchRequest
-import wiki
 import logging
+
+from aiohttp import web
+from aiohttp.web import Request
+
+import wiki
+from requestClasses import GraphRequest, SearchRequest
 
 logger = logging.getLogger('wiki')
 
+
 @web.middleware
-async def json_middleware(request: Request, handler: RequestHandler):
-    data = {}
-    
+async def json_middleware(request: Request, handler):
     try:
         data = dict(request.rel_url.query)
     except Exception as e:
         logger.error('JsonMiddlewareError: %s', e)
         return web.json_response({'Error': 'Unknown error'})
-    
+
     request.data = data
     return await handler(request)
 
+
 routes = web.RouteTableDef()
+
 
 # TODO: refactor copied code
 @routes.get('/graph')
 async def send_graph(request: Request):
-    resp = {}
-    
     try:
         request.data = GraphRequest(**request.data)
     except AttributeError as e:
@@ -39,8 +40,6 @@ async def send_graph(request: Request):
 
 @routes.get('/search')
 async def search(request: Request):
-    resp = {}
-    
     try:
         request.data = SearchRequest(**request.data)
     except AttributeError as e:
