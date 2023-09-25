@@ -1,11 +1,28 @@
 # wikigraph
 
-Api for making graph of links of wikipedia first paragraph
+## Описание
+WikiGraph - это проект, представляющий собой приложение, написанное на Python, которое визуализирует связи и ссылки между статьями на Википедии. В проекте используется Redis для кэширования данных и Docker Compose для удобного развертывания и масштабирования приложения. Для асинхронных операций в приложении используется asyncio и aiohttp.
 
-```docker
+## Технологии
+- Python
+- Redis
+- Docker Compose
+- asyncio и aiohttp
+
+## Установка и Запуск
+Для запуска проекта выполните следующие шаги:
+
+1. Клонируйте репозиторий на свой локальный компьютер:
+```
+git clone https://github.com/L4m3r/wikigraph.git
+cd wikigraph
+```
+2. Запустите приложение с помощью Docker Compose:
+```
 docker-compose up -d --build
 ```
 
-# TODO
-- [ ] Add async redis library
-- [ ] Add frontend
+Это создаст контейнеры и настроит все необходимые зависимости. Приложение будет доступно по адресу `http://localhost:8080`.
+
+## Лицензия
+Проект распространяется под лицензией MIT. Подробности можно найти в файле [LICENSE](./LICENSE).
